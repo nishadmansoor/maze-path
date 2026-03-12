@@ -1,15 +1,17 @@
 from collections import deque
 import numpy as np 
 import matplotlib.pyplot as plt
+import math
+import random
 import heapq
 
 
 maze = np.array([
-    [ 1,  3,  0,  1,  5,  1,  0,  3,  1,  1],
-    [ 1,  0,  3,  0,  1,  0,  1,  0,  5,  1],
-    [ 1,  5,  1, 10,  3,  5,  1,  1,  0,  1],
-    [ 0,  1,  0,  5,  1, 10,  3,  1,  1,  1],
-    [ 1,  1,  3,  1,  0,  5, 10,  3,  0,  1],
+    [ 1,  3,  0,  1,  1,  1,  0,  1,  1,  1],
+    [ 1,  0,  1,  0, 10, 10, 10,  0,  1,  1],
+    [ 1,  1,  1,  0, 10, 10, 10,  1,  0,  1],
+    [ 0,  1,  1,  1, 10, 10,  1,  1,  1,  1],
+    [ 1,  1,  0,  1,  1,  1,  1,  1,  0,  1],
 ])
 
 start = (0, 0)
@@ -108,8 +110,118 @@ def ucs(maze, start, goal):
                 heapq.heappush(queue, (new_cost, neighbor))
     return None
 
+def heuristic(cell, goal):
+    return abs(cell[0] - goal[0]) + abs(cell[1] - goal[1])
+
+def greedy(maze, start, goal):
+    queue = [(heuristic(start, goal), start)]
+    came_from = {start: None}
+
+    while queue:
+        _, curr = heapq.heappop(queue)
+        if curr == goal:
+            return  new_path(came_from, start, goal)
+        for neighbor in neighbors(maze, curr[0], curr[1]):
+            if neighbor not in came_from:
+                came_from[neighbor] = curr
+                heapq.heappush(queue, (heuristic(neighbor, goal), neighbor))
+    return None
+
+#priority = new_cost + heuristic(neighbor, goal)
+def astar(maze, start, goal):
+    queue = [(heuristic(start, goal), start)]
+    came_from = {start: None}
+    visit_cost = {start: 0}
+
+    while queue:
+        _, curr = heapq.heappop(queue)
+        if curr == goal:
+            return new_path(came_from, start, goal)
+        for neighbor in neighbors(maze, curr[0], curr[1]):
+            new_cost = visit_cost[curr] + maze[neighbor]
+
+            if neighbor not in visit_cost or new_cost < visit_cost[neighbor]:
+                visit_cost[neighbor] = new_cost
+                priority = new_cost + heuristic(neighbor, goal)
+                came_from[neighbor] = curr
+                heapq.heappush(queue, (priority, neighbor))
+    return None
+
+class Node:
+    def __init__(self, cell, parent=None):
+        self.cell = cell
+        self.parent = parent
+        self.wins = 0
+        self.visits = 0
+        self.children = []
+#ucb1 function - (wins / visits) + C * sqrt(log(parent_visits) / visits)
+
+def ucb1(child, parent):
+    if child.visits == 0:
+        return float('inf')
+    c = math.sqrt(2)
+    return child.wins / child.visits + c * math.sqrt(math.log(parent.visits) / child.visits)
+
+def rollout(maze, node, goal, max_steps=100):
+    current = node.cell
+    visited = {current}
+    steps = 0
+    while current != goal and steps < max_steps:
+        options = []
+        for n in neighbors(maze, current[0], current[1]):
+            if n not in visited:
+                options.append(n)
+        if not options: 
+            return 0
+        current = random.choice(options)
+        visited.add(current)
+        steps += 1
+    if current == goal: 
+        return 1
+    else: 
+        return 0
+def backprop(node, result):
+    while node: 
+        node.visits += 1
+        node.wins += result
+        node = node.parent
+
+def mcts(maze, start, goal, iterations):
+    root_node = Node(start)
+    for i in range(iterations):
+        node = root_node
+        while node.cell != goal:
+            not_visited = [n for n in neighbors(maze, node.cell[0], node.cell[1]) 
+                          if n not in [child.cell for child in node.children]]
+            if not_visited:
+                neighbor = random.choice(not_visited)
+                node.children.append(Node(neighbor, parent=node))
+                node = node.children[-1]
+            else:
+                node = max(node.children, key=lambda c: ucb1(c, node))                   
+
+        result = rollout(maze, node, goal)
+        backprop(node, result)
+        
+    path = []
+    node = root_node
+    while node: 
+        path.append(node.cell)
+        if node.cell == goal:
+            break
+        if not node.children: 
+            break
+        node = max(node.children, key=lambda c: c.visits)
+    return path
+
 bfs_path = bfs(maze, start, goal)
 ucs_path = ucs(maze, start, goal)
+greedy_path = greedy(maze, start, goal)
+astar_path = astar(maze, start, goal)
+mcts_path = mcts(maze, start, goal, iterations=2000)
 
 visualize(maze, bfs_path, start, goal, title="BFS Path")
 visualize(maze, ucs_path, start, goal, title="UCS Path")
+visualize(maze, greedy_path, start, goal, title="Greedy Path")
+visualize(maze, astar_path, start, goal, title="A* Path")
+visualize(maze, mcts_path, start, goal, title="MCTS Path")
