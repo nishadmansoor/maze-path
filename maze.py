@@ -214,14 +214,16 @@ def mcts(maze, start, goal, iterations):
         node = max(node.children, key=lambda c: c.visits)
     return path
 
-bfs_path = bfs(maze, start, goal)
-ucs_path = ucs(maze, start, goal)
-greedy_path = greedy(maze, start, goal)
-astar_path = astar(maze, start, goal)
-mcts_path = mcts(maze, start, goal, iterations=2000)
 
-visualize(maze, bfs_path, start, goal, title="BFS Path")
-visualize(maze, ucs_path, start, goal, title="UCS Path")
-visualize(maze, greedy_path, start, goal, title="Greedy Path")
-visualize(maze, astar_path, start, goal, title="A* Path")
-visualize(maze, mcts_path, start, goal, title="MCTS Path")
+if __name__ == "__main__":
+    bfs_path = bfs(maze, start, goal)
+    ucs_path = ucs(maze, start, goal)
+    greedy_path = greedy(maze, start, goal)
+    astar_path = astar(maze, start, goal)
+    mcts_path = mcts(maze, start, goal, iterations=2000)
+
+    visualize(maze, bfs_path, start, goal, title="BFS Path")
+    visualize(maze, ucs_path, start, goal, title="UCS Path")
+    visualize(maze, greedy_path, start, goal, title="Greedy Path")
+    visualize(maze, astar_path, start, goal, title="A* Path")
+    visualize(maze, mcts_path, start, goal, title="MCTS Path")
