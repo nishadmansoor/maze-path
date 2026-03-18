@@ -171,9 +171,9 @@ def rollout(maze, node, goal, max_steps=100):
         for n in neighbors(maze, current[0], current[1]):
             if n not in visited:
                 options.append(n)
-        if not options: 
+        if not options:
             return 0
-        current = random.choice(options)
+        current = min(options, key=lambda cell: heuristic(cell, goal))
         visited.add(current)
         steps += 1
     if current == goal: 
@@ -203,16 +203,24 @@ def mcts(maze, start, goal, iterations):
         result = rollout(maze, node, goal)
         backprop(node, result)
         
-    path = []
-    node = root_node
-    while node: 
-        path.append(node.cell)
-        if node.cell == goal:
+    goal_node = None
+    stack = [root_node]
+    while stack: 
+        current = stack.pop()
+        if current.cell == goal:
+            goal_node = current
             break
-        if not node.children: 
-            break
-        node = max(node.children, key=lambda c: c.visits)
-    return path
+        stack.extend(current.children)
+    if goal_node:
+        path = []
+        node = goal_node
+        while node:
+            path.append(node.cell)
+            node = node.parent
+        path.reverse()
+        return path
+    else:
+        return None
 
 
 if __name__ == "__main__":
@@ -220,7 +228,7 @@ if __name__ == "__main__":
     ucs_path = ucs(maze, start, goal)
     greedy_path = greedy(maze, start, goal)
     astar_path = astar(maze, start, goal)
-    mcts_path = mcts(maze, start, goal, iterations=2000)
+    mcts_path = mcts(maze, start, goal, iterations=50)
 
     visualize(maze, bfs_path, start, goal, title="BFS Path")
     visualize(maze, ucs_path, start, goal, title="UCS Path")
