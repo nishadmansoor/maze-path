@@ -32,6 +32,7 @@ def make_dataset(num_mazes):
 
         if not solvable(maze, (0, 0), (size-1, size-1)):
             continue
+        #terrain_variance = float(numpy.var(maze[maze != 0]))
 
         results = {}
         algos = {'bfs': bfs, 'ucs': ucs, 'greedy': greedy, 'astar': astar}
@@ -45,18 +46,21 @@ def make_dataset(num_mazes):
 
         #mcts, separate due to iterations
         start_time = time.time()
-        mcts_path = mcts(maze, start, goal, iterations=200)
+        mcts_result, mcts_found = mcts(maze, start, goal, iterations=1000)
         end_time = time.time()
         results['mcts'] = {
-            'path_cost': sum(maze[x, y] for x, y in mcts_path) if mcts_path else None,
-            'time': end_time - start_time}
-        working_algos = {k: v for k, v in results.items() if k!= 'mcts'}
-        best_algo = min(working_algos, key=lambda x: (working_algos[x]['path_cost'] if working_algos[x]['path_cost'] is not None else float('inf'),
-        working_algos[x]['time']
-        ))
+            'path_cost': sum(maze[x,y] for x,y in mcts_result) if mcts_found and mcts_result else None,
+            'time': end_time - start_time
+        }
+        best_algo = min(results, key=lambda x: (
+        results[x]['path_cost'] if results[x]['path_cost'] is not None else float('inf'),
+        results[x]['time']
+    ))
+
         dataset.append({
             'size': size,
             'density': density,
+            #'terrain_variance': terrain_variance,
             'results': results,
             'best algorithm': best_algo
         })
@@ -64,7 +68,7 @@ def make_dataset(num_mazes):
 
 dataset = make_dataset(500)
 with open ('dataset.csv', 'w', newline='') as file:
-    writer = csv.DictWriter(file, fieldnames=[ 'size', 'density', 'bfs_cost', 'bfs_time', 'ucs_cost', 'ucs_time',
+    writer = csv.DictWriter(file, fieldnames=[ 'size', 'density','bfs_cost', 'bfs_time', 'ucs_cost', 'ucs_time',
 'greedy_cost', 'greedy_time', 'astar_cost', 'astar_time',
 'mcts_cost', 'mcts_time', 'best_algorithm'])
     writer.writeheader()
@@ -72,6 +76,7 @@ with open ('dataset.csv', 'w', newline='') as file:
         writer.writerow({
             'size': data['size'],
             'density': data['density'],
+            #'terrain_variance': data['terrain_variance'],
             'bfs_cost': data['results']['bfs']['path_cost'],
             'bfs_time': data['results']['bfs']['time'],
             'ucs_cost': data['results']['ucs']['path_cost'],

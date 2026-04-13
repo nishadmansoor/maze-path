@@ -188,39 +188,58 @@ def backprop(node, result):
 
 def mcts(maze, start, goal, iterations):
     root_node = Node(start)
+    cell_to_node = {start: root_node}
     for i in range(iterations):
         node = root_node
         while node.cell != goal:
             not_visited = [n for n in neighbors(maze, node.cell[0], node.cell[1]) 
-                          if n not in [child.cell for child in node.children]]
+                          if n not in cell_to_node]
             if not_visited:
                 neighbor = random.choice(not_visited)
-                node.children.append(Node(neighbor, parent=node))
-                node = node.children[-1]
+                new_node = Node(neighbor, parent=node)
+                node.children.append(new_node)
+                cell_to_node[neighbor] = new_node
+                node = new_node
             else:
+                if not node.children:
+                    break
                 node = max(node.children, key=lambda c: ucb1(c, node))                   
 
         result = rollout(maze, node, goal)
         backprop(node, result)
         
+    # search for goal node in tree
     goal_node = None
     stack = [root_node]
-    while stack: 
+    while stack:
         current = stack.pop()
         if current.cell == goal:
             goal_node = current
             break
         stack.extend(current.children)
+
     if goal_node:
+        # trace back from goal using parent pointers
         path = []
         node = goal_node
         while node:
             path.append(node.cell)
             node = node.parent
         path.reverse()
-        return path
+        return path, True
     else:
-        return None
+        path = [start]
+        visited = {start}
+        current = start
+        while current != goal:
+            options = [n for n in neighbors(maze, current[0], current[1])
+                       if n not in visited]
+            if not options:
+                return None, False  # ← return tuple, not just None
+            current = min(options, key=lambda c: heuristic(c, goal))
+            visited.add(current)
+            path.append(current)
+        return path, False
 
 
 if __name__ == "__main__":
@@ -228,7 +247,14 @@ if __name__ == "__main__":
     ucs_path = ucs(maze, start, goal)
     greedy_path = greedy(maze, start, goal)
     astar_path = astar(maze, start, goal)
-    mcts_path = mcts(maze, start, goal, iterations=50)
+    mcts_path, mcts_found = mcts(maze, start, goal, iterations=1000)
+
+    #path costs
+    print("BFS path cost:", sum(maze[r][c] for r, c in bfs_path))
+    print("UCS path cost:", sum(maze[r][c] for r, c in ucs_path))
+    print("Greedy path cost:", sum(maze[r][c] for r, c in greedy_path))
+    print("A* path cost:", sum(maze[r][c] for r, c in astar_path))
+    print("MCTS path cost: ", sum(maze[r][c] for r,c in mcts_path) if mcts_path else None)
 
     visualize(maze, bfs_path, start, goal, title="BFS Path")
     visualize(maze, ucs_path, start, goal, title="UCS Path")
