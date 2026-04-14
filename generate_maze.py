@@ -5,6 +5,10 @@ import csv
 import time
 
 def generate_maze(size, density, weight):
+    '''
+    generates a random weighted terrain maze of a given size.
+    each cell is randomly assigned a wall based on density or a terrain cost from a weight list. 
+    '''
     grid = numpy.ones((size,size), dtype=int)
     for i in range(size): #rows
         for j in range(size): #cols 
@@ -17,10 +21,18 @@ def generate_maze(size, density, weight):
     return grid
 
 def solvable(maze, start, goal):
+    '''
+    checks if a maze is solvable using bfs.
+    maze is solvable means is there a valid path from start to goal.
+    '''
     path = bfs(maze, start, goal)
     return path is not None
 
 def make_dataset(num_mazes):
+    '''creates dataset of num_mazes randomly generated mazes.
+    for each maze that is solvable, run all 5 algorithms and records path cost and runtime. 
+    best algorithm is determined by lowest path cost; runtime is used as a tiebreaker
+    '''
     dataset = []
     while len(dataset) < num_mazes:
         size = random.choice([10, 20])

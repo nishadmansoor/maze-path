@@ -5,7 +5,8 @@ import math
 import random
 import heapq
 
-
+#hand-coded maze for testing & visualization
+# 0 is wall, 1 is normal terrain. 3/5/10 is different terrain weights
 maze = np.array([
     [ 1,  3,  0,  1,  1,  1,  0,  1,  1,  1],
     [ 1,  0,  1,  0, 10, 10, 10,  0,  1,  1],
@@ -18,7 +19,12 @@ start = (0, 0)
 goal = (4, 9)
 
 def neighbors(maze, row, col):
-    directions = [(-1, 0), (1, 0), (0, -1), (0, 1)] #up, down, left, right
+    '''
+    returns a list of valid neighbors for a specific cell.
+     neighbors are valid if it is within the bounds of the maze & not a wall. 
+    can move up, down, left, or right
+    '''
+    directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
     rows,cols = maze.shape 
     neighbors = []
     for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
@@ -27,10 +33,12 @@ def neighbors(maze, row, col):
             neighbors.append((r, c))
     return neighbors
 
-#print(neighbors(maze, 0, 0))
-#print(neighbors(maze, 1, 1))
 
 def bfs(maze, start, goal):
+    '''
+    breadth first search - finds fewest step path from start to goal. 
+    uses a fifo technique to explore levels, and ignores terrain costs
+    '''
     queue = deque([start])
     came_from = {start: None}
     while queue: 
@@ -44,6 +52,9 @@ def bfs(maze, start, goal):
     return None
 
 def new_path(came_from, start, goal):
+    '''
+    reconstructs the path from start to goal by tracing back through came_from
+    '''
     path = []
     node = goal
     while node != start:
@@ -55,6 +66,11 @@ def new_path(came_from, start, goal):
 
 #visualizing maze
 def visualize(maze, path, start, goal, title="Maze"):
+    '''
+    uses matplotlib to visualize the mazes. 
+    walls are black, the terrain costs are color-coded, path is highlighted in cyan
+    "S" is start, "G" is goal
+    '''
     rows, cols = maze.shape
     fig, axis = plt.subplots()
     colors = {
@@ -90,6 +106,9 @@ def visualize(maze, path, start, goal, title="Maze"):
 
 
 def ucs(maze, start, goal):
+    '''
+    uniform cost search: finds the lowest cost by using a priority queue ordered by cumulative terrain cost.
+    '''
     # priority queue of (cost, node)
     queue = []
     heapq.heappush(queue, (0, start))
@@ -111,9 +130,17 @@ def ucs(maze, start, goal):
     return None
 
 def heuristic(cell, goal):
+    '''
+    computes manhattan distance from a cell to goal. 
+    used for greedy & a* search
+    '''
     return abs(cell[0] - goal[0]) + abs(cell[1] - goal[1])
 
 def greedy(maze, start, goal):
+    '''
+    greedy search - looks at cell that is closest to goal. 
+    fast but not optimal as it ignores path cost
+    '''
     queue = [(heuristic(start, goal), start)]
     came_from = {start: None}
 
@@ -129,6 +156,10 @@ def greedy(maze, start, goal):
 
 #priority = new_cost + heuristic(neighbor, goal)
 def astar(maze, start, goal):
+    '''
+    A* search - finds optimal path by combining cumulative cost & heuristic. 
+    *f(n) = g(n) + h(n), g(n) is path cost and h(n) is manhattan distance*
+    '''
     queue = [(heuristic(start, goal), start)]
     came_from = {start: None}
     visit_cost = {start: 0}
@@ -148,6 +179,10 @@ def astar(maze, start, goal):
     return None
 
 class Node:
+    '''
+    a node in the MCTS search. 
+    tracks cell, its parent, win/visit count for ucb1 and its children
+    '''
     def __init__(self, cell, parent=None):
         self.cell = cell
         self.parent = parent
@@ -157,12 +192,20 @@ class Node:
 #ucb1 function - (wins / visits) + C * sqrt(log(parent_visits) / visits)
 
 def ucb1(child, parent):
+    '''
+    computes ucb1 score for a child node given its parent. 
+    balances explotation & exploration 
+    '''
     if child.visits == 0:
         return float('inf')
     c = math.sqrt(2)
     return child.wins / child.visits + c * math.sqrt(math.log(parent.visits) / child.visits)
 
 def rollout(maze, node, goal, max_steps=100):
+    '''
+    greedy rollout from node to goal. 
+    moves to unvisited neighbor that is closest to the goal by heuristic
+    '''
     current = node.cell
     visited = {current}
     steps = 0
@@ -181,12 +224,21 @@ def rollout(maze, node, goal, max_steps=100):
     else: 
         return 0
 def backprop(node, result):
+    '''
+    propagtes rollout result back up the tree from a node to start. 
+    increments visit count and adds result to win count
+    '''
     while node: 
         node.visits += 1
         node.wins += result
         node = node.parent
 
 def mcts(maze, start, goal, iterations):
+    '''
+    monte carlo tree search - uses repeated simulation to find path from start to goal. 
+    builds tree search over multiple iterations using selection, expansion, rollout, and backprop. 
+    cell_to_node is used to prevent duplicate nodes. 
+    '''
     root_node = Node(start)
     cell_to_node = {start: root_node}
     for i in range(iterations):
