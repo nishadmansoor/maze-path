@@ -40,7 +40,7 @@ The model is evaluated on a 20% test set using:
 * Feature importance scores
 
 ## Results
-* **Accuracy:** 72% (vs. ~53% majority-class baseline)
+* **Accuracy:** 72% (vs. ~46% majority-class baseline)
 * **Best predicted classes:** UCS (F1: 0.80), A* (F1: 0.66)
 * **Most predictive feature:** `astar_time` (importance: 0.185)
 * **Least predictive feature:** `size` (importance: 0.002)
